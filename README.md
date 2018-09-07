@@ -1,0 +1,1 @@
+# homebridge-spotify-play

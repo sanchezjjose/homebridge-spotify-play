@@ -1,0 +1,19 @@
+{
+  "name": "homebridge-spotify-play",
+  "version": "0.0.1",
+  "description": "Homebridge plugin to play Spotify playlist on my Alexa device.",
+  "keywords": [
+    "homebridge",
+    "homebridge-plugin",
+    "spotify",
+    "alexa"
+  ],
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.5"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "request": "^2.88.0"
+  }
+}
