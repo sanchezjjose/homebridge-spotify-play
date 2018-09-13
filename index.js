@@ -9,11 +9,50 @@ module.exports = function (homebridge) {
   homebridge.registerAccessory("homebridge-spotify-play", "Spotify", Spotify);
 };
 
-const sendRequest = (requestObj, log) => {
+const sendPostRequest = (url, refreshToken, clientToken, log) => {
   return new Promise((resolve, reject) => {
-    log(`Sending request to ${requestObj.url}`);
+    log(`Sending request to ${url}`);
 
-    request(requestObj, function (error, response, body) {
+    let req = {
+      url: url,
+      method: 'POST',
+      form: {
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+      },
+      headers: {
+        'Content-type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${clientToken}`
+      }
+    };
+
+    request(req, function (error, response, body) {
+      if (error) {
+        log(error.message);
+        return reject(error);
+      }
+
+      return resolve(response);
+    });
+  });
+};
+
+const sendPutRequest = (url, accessToken, log, opts = {}) => {
+  return new Promise((resolve, reject) => {
+    log(`Sending request to ${url}`);
+
+    let req = {
+      url: url,
+      method: 'PUT',
+      body: opts.body,
+      headers: {
+        'Accept': 'application/json',
+        'Content-type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    };
+
+    request(req, function (error, response, body) {
       if (error) {
         log(error.message);
         return reject(error);
@@ -29,7 +68,11 @@ class Spotify {
   constructor(log, config) {
     this.on = false;
     this.log = log;
-    this.requestUrl = config['requestUrl'];
+    this.accessToken;
+    this.tokenUrl = config['tokenUrl'];
+    this.volumeUrl = config['volumeUrl'];
+    this.shuffleUrl = config['shuffleUrl'];
+    this.playUrl = config['playUrl'];
     this.deviceId = config['deviceId'];
     this.base64clientToken = config['base64clientToken'];
     this.refreshToken = config['refreshToken'];
@@ -61,84 +104,36 @@ class Spotify {
   }
   
   setSwitchOnCharacteristic(on, next) {
-
     if (on) {
       this.log('Getting Spotify access token...');
-    
-      let requestObj = {
-        url: 'https://accounts.spotify.com/api/token',
-        method: 'POST',
-        form: {
-          'grant_type': 'refresh_token',
-          'refresh_token': this.refreshToken,
-        },
-        headers: {
-          'Content-type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${this.base64clientToken}`
-        }
-      };
 
-      // Get Spotify access token first.
-      sendRequest(requestObj, this.log)
+      sendPostRequest(this.tokenUrl, this.refreshToken, this.base64clientToken, this.log)
         .then(response => {
           this.log(`Setting volume on device...`);
+          this.accessToken = JSON.parse(response.body).access_token;
 
-          let accessToken = JSON.parse(response.body).access_token;
-          this.log('accessToken: ', accessToken);
-
-          let requestObj = {
-            url: `https://api.spotify.com/v1/me/player/volume?volume_percent=25&device_id=${this.deviceId}`,
-            method: 'PUT',
-            headers: {
-              'Accept': 'application/json',
-              'Content-type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
-            }
-          };
-
-          // Set volume on Alexa device.
-          return sendRequest(requestObj, this.log);
+          return sendPutRequest(`${this.volumeUrl}?device_id=${this.deviceId}`, this.accessToken, this.log);
         })
         .then(response => {
           this.log(`Shuffling Spotify playlist on device...`);
-
           this.on = true;
 
-          let requestObj = {
-            url: `https://api.spotify.com/v1/me/player/shuffle?state=true&device_id=${this.deviceId}`,
-            method: 'PUT',
-            headers: {
-              'Accept': 'application/json',
-              'Content-type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
-            }
-          };
-
-          // Shuffle Spotify playlist on Alexa device.
-          return sendRequest(requestObj, this.log);
+          return sendPutRequest(`${this.shuffleUrl}?device_id=${this.deviceId}`, this.accessToken, this.log);
         })
         .then(response => {
           this.log(`Starting Spotify playlist on device...`);
 
-          let requestObj = {
-            url: this.requestUrl,
-            method: 'PUT',
+          const opts = {
             body: JSON.stringify({ 
               'context_uri': this.playlist,
               'offset': {
                 'position': 5,
                 'position_ms': 0  
               }
-            }),
-            headers: {
-              'Accept': 'application/json',
-              'Content-type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`
             }
-          };
+          )};
 
-          // Play Spotify playlist on Alexa device.
-          return sendRequest(requestObj, this.log);
+          return sendPutRequest(`${this.playUrl}?device_id=${this.deviceId}`, this.accessToken, this.log, opts);
         })
         .then(response => {
           this.log(`Successfully started Spotify playlist ${this.playlist}`);
