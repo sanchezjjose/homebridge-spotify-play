@@ -116,7 +116,6 @@ class Spotify {
         })
         .then(response => {
           this.log(`Shuffling Spotify playlist on device...`);
-          this.on = true;
 
           return sendPutRequest(`${this.shuffleUrl}?device_id=${this.deviceId}`, this.accessToken, this.log);
         })
@@ -137,6 +136,8 @@ class Spotify {
         })
         .then(response => {
           this.log(`Successfully started Spotify playlist ${this.playlist}`);
+          this.on = true;
+
           next();
 
         }).catch(err => {
