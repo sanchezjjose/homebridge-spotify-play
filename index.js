@@ -104,7 +104,28 @@ class Spotify {
               this.log(`Successfully started playlist ${this.playlist}`);
 
               this.on = true;
-              next();
+
+              let requestObj = {
+                url: 'https://api.spotify.com/v1/me/player/shuffle?state=true',
+                method: 'PUT',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`
+                }
+              };
+
+              // Shuffle Spotify playlist on Alexa device.
+              sendRequest(requestObj, this.log)
+                .then(response => {
+                  this.log(`Successfully shuffled playlist ${this.playlist}`);
+
+                  next();
+
+                }).catch(err => {
+                  this.log('Error shuffling playlist.', err);
+                  next(err);
+                });
 
             }).catch(err => {
               this.log('Error playing playlist.', err);
