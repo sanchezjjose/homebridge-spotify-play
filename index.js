@@ -105,7 +105,7 @@ class Spotify {
           this.on = true;
 
           let requestObj = {
-            url: 'https://api.spotify.com/v1/me/player/shuffle?state=true',
+            url: `https://api.spotify.com/v1/me/player/shuffle?state=true&device_id=${this.deviceId}`,
             method: 'PUT',
             headers: {
               'Accept': 'application/json',
