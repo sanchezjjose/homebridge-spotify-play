@@ -30,6 +30,7 @@ class Spotify {
     this.on = false;
     this.log = log;
     this.requestUrl = config['requestUrl'];
+    this.deviceId = config['deviceId'];
     this.base64clientToken = config['base64clientToken'];
     this.refreshToken = config['refreshToken'];
     this.playlist = config['playlist'];
@@ -81,16 +82,12 @@ class Spotify {
       sendRequest(requestObj, this.log)
         .then(response => {
           let accessToken = JSON.parse(response.body).access_token;
+
+          console.log('accessToken: ', accessToken);
+
           let requestObj = {
-            url: this.requestUrl,
+            url: `https://api.spotify.com/v1/me/player/volume?volume_percent=30&device_id=${this.deviceId}`,
             method: 'PUT',
-            body: JSON.stringify({ 
-              'context_uri': this.playlist,
-              'offset': {
-                'position': 5,
-                'position_ms': 0  
-              }
-            }),
             headers: {
               'Accept': 'application/json',
               'Content-type': 'application/json',
@@ -98,16 +95,21 @@ class Spotify {
             }
           };
 
-          // Play Spotify playlist on Alexa device.
+          // Set volume on Alexa device.
           sendRequest(requestObj, this.log)
             .then(response => {
-              this.log(`Successfully started playlist ${this.playlist}`);
-
-              this.on = true;
+              this.log(`Successfully set volume.`);
 
               let requestObj = {
-                url: 'https://api.spotify.com/v1/me/player/shuffle?state=true',
+                url: this.requestUrl,
                 method: 'PUT',
+                body: JSON.stringify({ 
+                  'context_uri': this.playlist,
+                  'offset': {
+                    'position': 5,
+                    'position_ms': 0  
+                  }
+                }),
                 headers: {
                   'Accept': 'application/json',
                   'Content-type': 'application/json',
@@ -115,22 +117,44 @@ class Spotify {
                 }
               };
 
-              // Shuffle Spotify playlist on Alexa device.
+              // Play Spotify playlist on Alexa device.
               sendRequest(requestObj, this.log)
                 .then(response => {
-                  this.log(`Successfully shuffled playlist ${this.playlist}`);
+                  this.log(`Successfully started playlist ${this.playlist}`);
 
-                  next();
+                  this.on = true;
+
+                  let requestObj = {
+                    url: 'https://api.spotify.com/v1/me/player/shuffle?state=true',
+                    method: 'PUT',
+                    headers: {
+                      'Accept': 'application/json',
+                      'Content-type': 'application/json',
+                      'Authorization': `Bearer ${accessToken}`
+                    }
+                  };
+
+                  // Shuffle Spotify playlist on Alexa device.
+                  sendRequest(requestObj, this.log)
+                    .then(response => {
+                      this.log(`Successfully shuffled playlist ${this.playlist}`);
+
+                      next();
+
+                    }).catch(err => {
+                      this.log('Error shuffling playlist.', err);
+                      next(err);
+                    });
 
                 }).catch(err => {
-                  this.log('Error shuffling playlist.', err);
+                  this.log('Error playing playlist.', err);
                   next(err);
                 });
 
-            }).catch(err => {
-              this.log('Error playing playlist.', err);
-              next(err);
-            });
+          }).catch(err => {
+            this.log('Error setting volume.', err);
+            next(err);
+          });
 
       }).catch(err => {
         this.log('Error fetching access token.', err);
