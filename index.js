@@ -137,7 +137,6 @@ class Spotify {
         .then(response => {
           this.log(`Successfully started Spotify playlist ${this.playlist}`);
           this.on = true;
-
           next();
 
         }).catch(err => {
