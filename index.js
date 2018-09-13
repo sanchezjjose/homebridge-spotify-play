@@ -112,12 +112,12 @@ class Spotify {
           this.log(`Setting volume on device...`);
           this.accessToken = JSON.parse(response.body).access_token;
 
-          return sendPutRequest(`${this.volumeUrl}?device_id=${this.deviceId}`, this.accessToken, this.log);
+          return sendPutRequest(`${this.volumeUrl}&device_id=${this.deviceId}`, this.accessToken, this.log);
         })
         .then(response => {
           this.log(`Shuffling Spotify playlist on device...`);
 
-          return sendPutRequest(`${this.shuffleUrl}?device_id=${this.deviceId}`, this.accessToken, this.log);
+          return sendPutRequest(`${this.shuffleUrl}&device_id=${this.deviceId}`, this.accessToken, this.log);
         })
         .then(response => {
           this.log(`Starting Spotify playlist on device...`);
